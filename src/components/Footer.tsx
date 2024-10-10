@@ -4,4 +4,4 @@ export default function Footer() {
       <p>🦥 Created by Matt Vandersluys</p>
     </footer>
   );
-}
+} 

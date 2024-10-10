@@ -25,3 +25,29 @@ body {
     text-wrap: balance;
   }
 }
+
+
+form {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 2fr;
+}
+label {
+  display: block;
+  text-align: right;
+}
+input {
+  color: black;
+  padding: 0.25rem 0.6rem;
+}
+button {
+  padding: 0.25rem 0.6rem;
+  border: none;
+  cursor: pointer;
+  background:slategray;
+  color: white;
+}
+form button[type=submit] {
+  grid-column: 2;
+  margin: 0 auto;
+}
