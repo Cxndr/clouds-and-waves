@@ -4,27 +4,32 @@ import type { Profile } from "@/app/profile/profile.type"
 import { useState } from "react";
 
 interface UserProfileProps {
-  userProfileData: Profile;
-  updateProfile: (formData: { username: string; bio: string }) => void;
+  user: Profile;
+  updateUser: (formData: { username: string; bio: string }) => void;
+  deleteUser: (userId: number) => void;
 }
 
-export default function UserProfile({userProfileData,updateProfile}: UserProfileProps) {
+export default function UserProfile({user,updateUser, deleteUser}: UserProfileProps) {
 
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profile, setProfile] = useState(userProfileData);
+  const [profile, setProfile] = useState(user);
 
-  function updateUser(formData: { username: string; bio: string }) {
+  function updateProfile(formData: { username: string; bio: string }) {
     console.log("FORM DATA FOR UPDATE", formData);
-    updateProfile(formData);
+    updateUser(formData);
     setEditingProfile(false);
   }
 
-  async function handleEditProfileSubmit(e: React.FormEvent) {
+  async function handleEditProfile(e: React.FormEvent) {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const formDataObj = Object.fromEntries(formData) as { username: string; bio: string };
-    updateUser(formDataObj);
+    updateProfile(formDataObj);
     setProfile({ ...profile, ...formDataObj });
+  }
+
+  function handleDeleteUser() {
+    deleteUser(profile.id);
   }
 
   if (!profile) {
@@ -34,12 +39,15 @@ export default function UserProfile({userProfileData,updateProfile}: UserProfile
     <div>
       {editingProfile ? (
         <div>
-          <form onSubmit={handleEditProfileSubmit}>
+          <form onSubmit={handleEditProfile}>
             <label htmlFor="username">Username</label>
             <input name="username" type="text" defaultValue={profile.username} />
             <label htmlFor="bio">Bio</label>
             <input name="bio" type="text" defaultValue={profile.bio} />
             <button type="submit">Save</button>
+            <button onClick={handleDeleteUser}>
+              Delete
+            </button>
           </form>
         </div>
       ) : (

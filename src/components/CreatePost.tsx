@@ -1,9 +1,9 @@
+"use client";
 import { Post } from "@/app/feed/post.type";
 
 interface CreatePostProps {
   userId: number;
   insertPost: (formData: Post) => void;
-
 }
 
 export default function CreatePost({userId, insertPost} : CreatePostProps) {
@@ -13,7 +13,7 @@ export default function CreatePost({userId, insertPost} : CreatePostProps) {
     const formData = new FormData(e.target as HTMLFormElement);
     const formDataObj = Object.fromEntries(formData);
     const newPost: Post = {
-      userId: userId, //todo: get userId from auth
+      userId: userId,
       artist: formDataObj.artist as string,
       title: formDataObj.title as string,
       genreId: parseInt(formDataObj.genreId as string),
@@ -29,11 +29,22 @@ export default function CreatePost({userId, insertPost} : CreatePostProps) {
   return (
     <div>
       <form onSubmit={handleSubmit}>
+
+        <label htmlFor="artist">Artist</label>
         <input name="artist" type="text" />
+
+        <label htmlFor="title">Title</label>
         <input name="title" type="text" />
+
+        <label htmlFor="genreId">Genre ID</label>
         <input name="genreId" type="number" />
+
+        <label htmlFor="content">Content</label>
         <input name="content" type="text" />
+
+        <label htmlFor="link">Link</label>
         <input name="link" type="text" />
+        
         <button type="submit">Create Post</button>
       </form>
     </div>

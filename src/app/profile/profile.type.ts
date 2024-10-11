@@ -1,4 +1,5 @@
 export type Profile = {
+  id: number,
   username: string,
   bio: string,
   posts: object[],
@@ -6,3 +7,4 @@ export type Profile = {
   feedGenres: number[],
   savedPosts: object[],
 }
+
