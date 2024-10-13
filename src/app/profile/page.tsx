@@ -1,18 +1,18 @@
 import { currentUser } from "@clerk/nextjs/server";
-import UserProfile from "@/components/UserProfile";
-import {getUser, updateUser, deleteUser} from "@/utils/getUser";
-import { Profile } from "@/app/profile/profile.type";
+import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
 
-  const clerkUser = await currentUser();
-  if (!clerkUser) {
-    console.log("no clerkUser found");
+  const currClerkUser = await currentUser();
+  if (!currClerkUser) {
+    console.log("not logged in");
+    // todo:  return login form
     return;
   }
-  const user = await getUser(clerkUser)as Profile;
+
+  redirect("/profile/" + currClerkUser.id);
 
   return (
-    <UserProfile user={user} updateUser={updateUser} deleteUser={deleteUser}/>
+    <p>Loading...</p>
   );
 }

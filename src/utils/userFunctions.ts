@@ -1,8 +1,9 @@
 import { db } from "./dbConn";
 import { auth} from "@clerk/nextjs/server";
 import { QueryResult } from "pg";
-import { Profile } from "@/app/profile/profile.type";
+import { Profile } from "@/utils/types/profile.type";
 import type { User } from '@clerk/nextjs/server'
+import { clerkClient } from "@clerk/nextjs/server";
 
 /*
   userFunctions.ts
@@ -21,17 +22,19 @@ import type { User } from '@clerk/nextjs/server'
 
 */
 
-const clerkAuthUser = auth();
 
-export function setProfileData(response: QueryResult) {
+
+export async function setProfileData(response: QueryResult) {
   const userProfileData: Profile = {
     id: response.rows[0].id,
-    username: response.rows[0].user_name,
+    clerkId: response.rows[0].clerk_user_id,
     bio: response.rows[0].bio,
     posts: response.rows[0].user_posts,
     feedUsers: response.rows[0].feed_users,
     feedGenres: response.rows[0].feed_genres,
     savedPosts: response.rows[0].saved_posts,
+    followers: response.rows[0].followers,
+    clerkUser: JSON.parse(JSON.stringify(await clerkClient().users.getUser(response.rows[0].clerk_user_id)))
   };
   return userProfileData
 }
@@ -46,20 +49,33 @@ export async function getUser(clerkUser: User) {
   const response = await db.query(`
     SELECT * FROM cw_users
     WHERE clerk_user_id = $1`,
-    [clerkAuthUser.userId]
+    [clerkUser.id]
   );
   
   if (response.rowCount === 0) {
     console.log("no database entry found for profile - creating one now");
     await db.query(`
-      INSERT INTO cw_users (clerk_user_id, user_name)
+      INSERT INTO cw_users (clerk_user_id)
       VALUES ($1, $2)`,
-      [clerkAuthUser.userId, clerkUser.username]
+      [clerkUser.id]
     );
   }
   else {
-    return setProfileData(response); 
+    return await setProfileData(response); 
   }
+}
+
+export async function getUsers(userIds: number[]) {
+  const response = await db.query(`
+    SELECT * FROM cw_users
+    WHERE id = ANY($1)`,
+    [userIds]
+  );
+  const returnArray: Profile[] = [];
+  response.rows.map(async (row) => {
+    returnArray.push(await setProfileData(row));
+  });
+  return returnArray as Profile[];
 }
 
 /// UPDATE
@@ -69,11 +85,12 @@ interface FormDataObject {
 }
 export async function updateUser(formData: FormDataObject) {
   "use server";
+  const clerkAuthUser = auth();
   await db.query(`
     UPDATE cw_users
-    SET user_name = $1, bio = $2
+    SET bio = $2
     WHERE clerk_user_id = $3`,
-    [formData.username, formData.bio, clerkAuthUser.userId]
+    [formData.bio, clerkAuthUser.userId]
   );
 }
 

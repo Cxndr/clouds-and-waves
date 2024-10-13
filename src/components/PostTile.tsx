@@ -1,4 +1,4 @@
-import {Post} from '../app/feed/post.type';
+import {Post} from '../utils/types/post.type';
 import timeAgo from '@/utils/timeAgo';
 import { useState } from 'react';
 

@@ -1,4 +1,5 @@
 export type Post = {
+  id: number,
   userId: number,
   artist: string,
   title: string,
