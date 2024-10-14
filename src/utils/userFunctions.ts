@@ -33,6 +33,7 @@ export async function setProfileData(response: QueryResult) {
     feedUsers: response.rows[0].feed_users,
     feedGenres: response.rows[0].feed_genres,
     savedPosts: response.rows[0].saved_posts,
+    likedComments: response.rows[0].liked_comments,
     followers: response.rows[0].followers,
     clerkUser: JSON.parse(JSON.stringify(await clerkClient().users.getUser(response.rows[0].clerk_user_id)))
   };
@@ -83,13 +84,13 @@ interface FormDataObject {
   username: string;
   bio: string;
 }
-export async function updateUser(formData: FormDataObject) {
+export async function updateUser(formData: {bio: string}) {
   "use server";
   const clerkAuthUser = auth();
   await db.query(`
     UPDATE cw_users
-    SET bio = $2
-    WHERE clerk_user_id = $3`,
+    SET bio = $1
+    WHERE clerk_user_id = $2`,
     [formData.bio, clerkAuthUser.userId]
   );
 }

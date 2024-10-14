@@ -1,7 +1,8 @@
 "use client";
 
 import type { Profile } from "@/utils/types/profile.type"
-// import { useState } from "react";
+import type { Comment } from "@/utils/types/comment.type"
+import { useState, useEffect } from "react";
 import type { Post } from "@/utils/types/post.type";
 import * as Avatar from "@radix-ui/react-avatar";
 import ProfileTabs from "./ProfileTabs";
@@ -10,27 +11,51 @@ import UserCard from "./UserCard";
 interface UserProfileProps {
   user: Profile;
   posts: { data: Post[] };
-  comments: { data: Comment[]}
-  saved: Post[]
-  liked: { data: Comment[]}
+  comments: { data: Comment[] }
+  saved: { data: Post[] }
+  liked: { data: Comment[] }
   followers: Profile[]
   following: Profile[]
-
-    // updateUser: (formData: { username: string; bio: string }) => void;
-  // deleteUser: (userId: number) => void;
+  currUser: Profile
+  updateUser: (formData: { bio: string }) => void;
+  savePost: (postId: number, userId: number, addOrRemove: boolean) => void;
+  deletePost: (postId: number) => void;
+  updatePost: (postId: number, updateData: {artist: string, title: string, genreId: number, link: string, content: string}) => void;
+  insertComment: (postId: number, userId: number, content: string) => void;
+  deleteComment: (commentId: number) => void;
+  likeComment: (commentId: number, userId: number, addOrRemove: boolean) => void;
+  updateComment: (commentId: number, content: string) => void;
 }
 
-export default function UserProfile({user, posts, comments, saved, liked, followers, following}: UserProfileProps) {
+export default function UserProfile({user, posts, comments, saved, liked, followers, following, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment, updateUser}: UserProfileProps) {
 
-  // const [profile, setProfile] = useState(user);
+  const [ownedProfile, setOwnedProfile] = useState(false);
 
-  // function updateProfile(formData: { username: string; bio: string }) {
-  //   updateUser(formData);
-  // }
+  useEffect(() => {
+    if (user.clerkUser.id === currUser.clerkUser.id) {
+      setOwnedProfile(true);
+    } else {
+      setOwnedProfile(false);
+    }
+  }, [user.clerkUser.id, currUser.clerkUser.id]);
 
-  // if (!profile) {
-  //   return <div>Loading...</div>;
-  // }
+  const [editingBio, setEditingBio] = useState(false);
+
+  function handleEditBio() {
+    setEditingBio(true);
+  }
+
+  function handleBioUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    const formData = e.target as HTMLFormElement;
+    const formDataObj = Object.fromEntries(new FormData(formData));
+    const updatedUser = {
+      bio: formDataObj.bio as string
+    }
+    updateUser(updatedUser);
+    setEditingBio(false);
+    user.bio = formDataObj.bio as string;
+  }
 
   return (
     <div className="h-svh w-full m-10 flex flex-row gap-12 items-start justify-start">
@@ -46,13 +71,32 @@ export default function UserProfile({user, posts, comments, saved, liked, follow
         <div>
           <div>
             <h1 className="bold text-4xl">{user.clerkUser.username}</h1>
-            {user.bio ? 
-              <div>
-                <h2>Bio: </h2>
-                <p>{user.bio}</p>
-              </div>
-            : <div><p>No bio set</p></div>
+            {
+              editingBio ?
+                <form onSubmit={handleBioUpdate}>
+                  <input type="text" name="bio" defaultValue={user.bio} />
+                  <button>Save</button>
+                  <button onClick={() => setEditingBio(false)}>
+                    Cancel
+                  </button>
+                </form>
+              :
+              <>
+                {user.bio ? 
+                  <div>
+                    <h2>Bio: </h2>
+                    <p>{user.bio}</p>
+                  </div>
+                : <div><p>No bio set</p></div>
+                }
+                {
+                  ownedProfile ?
+                  <button onClick={handleEditBio}>Edit Bio</button>
+                  : null
+                }
+              </>
             }
+
           </div>
           
           <div>
@@ -86,7 +130,20 @@ export default function UserProfile({user, posts, comments, saved, liked, follow
       
 
       <div className="flex-grow">
-        <ProfileTabs posts={posts} comments={comments} saved={saved} liked={liked}/>
+        <ProfileTabs 
+          posts={posts} 
+          comments={comments} 
+          saved={saved} 
+          liked={liked}
+          currUser={currUser}
+          savePost={savePost}
+          deletePost={deletePost}
+          updatePost={updatePost}
+          insertComment={insertComment}
+          deleteComment={deleteComment}
+          likeComment={likeComment}
+          updateComment={updateComment}
+        />
       </div>
 
     </div>

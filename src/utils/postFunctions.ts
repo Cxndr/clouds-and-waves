@@ -36,8 +36,61 @@ import { Post } from "@/utils/types/post.type";
 import { Comment } from "./types/comment.type";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { clerkClient } from "@clerk/nextjs/server";
+import { QueryResult } from "pg";
 
+async function addCommentsToPosts(posts: Post[], skipUserIds: number[]=[-1]) {
+  return await Promise.all (
+    posts.map(async (post) => {
+      const comments = await getComments(post.id, skipUserIds);
+      post.comments = comments;
+      return post
+    })
+  )
+}
 
+export async function setPostsData(response: QueryResult) {
+    const posts: Post[] = []
+    if (!response.rowCount) return posts; 
+    for (let i=0; i < response.rowCount; i++) {
+      const post: Post = {
+        id: response.rows[i].id,
+        userId: response.rows[i].user_id,
+        clerkUser: 
+          response.rows[i].clerk_user_id
+          ? JSON.parse(JSON.stringify(await clerkClient().users.getUser(response.rows[i].clerk_user_id))) 
+          : null,
+        artist: response.rows[i].artist,
+        title: response.rows[i].title,
+        genreId: response.rows[i].genre_id,
+        link: response.rows[i].link,
+        content: response.rows[i].content,
+        dateCreated: response.rows[i].date_created,
+        savedCount: response.rows[i].saved_count,
+        comments: {data: [], pagination: {totalComments: 0, currentPage: 1, totalPages: 1, pageSize: 10}}
+      }
+      posts.push(post);
+    }
+    return posts;
+}
+
+async function setCommentsData(response: QueryResult) {
+  const comments: Comment[] = []
+  if (!response.rowCount) return comments;
+  for (let i=0; i < response.rowCount; i++) {
+    const comment: Comment = {
+      id: response.rows[i].id,
+      userId: response.rows[i].user_id,
+      clerkUser: response.rows[i].clerk_user_id ? JSON.parse(JSON.stringify(await clerkClient().users.getUser(response.rows[i].clerk_user_id))) : null,
+      postId: response.rows[i].post_id,
+      content: response.rows[i].content,
+      dateCreated: response.rows[i].date_created,
+      likeCount: response.rows[i].like_count
+    }
+    comments.push(comment);
+  }
+  return comments;
+}
 
 /// READ
 
@@ -53,14 +106,16 @@ export async function getPostsAll(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_posts
-    WHERE user_id NOT IN (SELECT unnest($1::bigint[]))
-    AND genre_id NOT IN (SELECT unnest($2::bigint[]))
-    ORDER BY created_at DESC
+    SELECT cw_posts.*, cw_users.clerk_user_id 
+    FROM cw_posts
+    JOIN cw_users ON cw_users.id = cw_posts.user_id
+    WHERE cw_posts.user_id NOT IN (SELECT unnest($1::bigint[]))
+    AND cw_posts.genre_id NOT IN (SELECT unnest($2::bigint[]))
+    ORDER BY cw_posts.created_at DESC
     LIMIT $3 OFFSET $4`,
     [skipUserIds, skipGenreIds, limit, offset]
   );
-  const posts = response.rows as Post[];
+  const posts: Post[] = await setPostsData(response);
 
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_posts
@@ -70,8 +125,10 @@ export async function getPostsAll(
   );
   const totalPosts = parseInt(totalResponse.rows[0].count);
 
+  const commentedPosts = await addCommentsToPosts(posts, skipUserIds);
+
   return {
-    data: posts,
+    data: commentedPosts,
     pagination: { 
       totalPosts: totalPosts, 
       currentPage: page, 
@@ -91,14 +148,16 @@ export async function getPostsUser(
   
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_posts
-    WHERE user_id = $1
-    AND genre_id NOT IN (SELECT unnest($2::bigint[]))
-    ORDER BY created_at DESC
+    SELECT cw_posts.*, cw_users.clerk_user_id
+    FROM cw_posts
+    JOIN cw_users ON cw_users.id = cw_posts.user_id
+    WHERE cw_posts.user_id = $1
+    AND cw_posts.genre_id NOT IN (SELECT unnest($2::bigint[]))
+    ORDER BY cw_posts.created_at DESC
     LIMIT $3 OFFSET $4`,
     [userId, skipGenreIds, limit, offset]
   );
-  const posts = response.rows as Post[];
+  const posts: Post[] = await setPostsData(response);
   
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_posts
@@ -108,8 +167,10 @@ export async function getPostsUser(
   );
   const totalPosts = parseInt(totalResponse.rows[0].count);
 
+  const commentedPosts = await addCommentsToPosts(posts)
+
   return {
-    data: posts,
+    data: commentedPosts,
     pagination: { 
       totalPosts: totalPosts, 
       currentPage: page, 
@@ -129,14 +190,16 @@ export async function getPostsGenre(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_posts
-    WHERE genre_id = $1
-    AND user_id NOT IN (SELECT unnest($2::bigint[]))
-    ORDER BY created_at DESC
+    SELECT cw_posts.*, cw_users.clerk_user_id
+    FROM cw_posts
+    JOIN cw_users ON cw_users.id = cw_posts.user_id
+    WHERE cw_posts.genre_id = $1
+    AND cw_posts.user_id NOT IN (SELECT unnest($2::bigint[]))
+    ORDER BY cw_posts.created_at DESC
     LIMIT $3 OFFSET $4`,
     [genreId, skipUserIds, limit, offset]
   );
-  const posts = response.rows as Post[];
+  const posts: Post[] = await setPostsData(response);
   
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_posts
@@ -146,8 +209,11 @@ export async function getPostsGenre(
   );
   const totalPosts = parseInt(totalResponse.rows[0].count);
 
+  const commentedPosts = await addCommentsToPosts(posts,skipUserIds)
+
+  
   return {
-    data: posts,
+    data: commentedPosts,
     pagination: { 
       totalPosts: totalPosts, 
       currentPage: page, 
@@ -167,14 +233,16 @@ export async function getPostsCustom(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_posts
-    WHERE user_id = $1
-    AND genre_id = $2
-    ORDER BY created_at DESC
+    SELECT cw_posts.*, cw_users.clerk_user_id 
+    FROM cw_posts
+    JOIN cw_users ON cw_users.id = cw_posts.user_id
+    WHERE cw_posts.user_id = $1
+    AND cw_posts.genre_id = $2
+    ORDER BY cw_posts.created_at DESC
     LIMIT $3 OFFSET $4`,
     [userDbId, genreId, limit, offset]
   );
-  const posts = response.rows as Post[];
+  const posts: Post[] = await setPostsData(response);
   
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_posts
@@ -184,8 +252,10 @@ export async function getPostsCustom(
   );
   const totalPosts = parseInt(totalResponse.rows[0].count);
 
+  const commentedPosts = await addCommentsToPosts(posts)
+
   return {
-    data: posts,
+    data: commentedPosts,
     pagination: { 
       totalPosts: totalPosts, 
       currentPage: page, 
@@ -195,17 +265,43 @@ export async function getPostsCustom(
   }
 }
 
-export async function getPostsArray(postIds: number[]) {
+export async function getPostsArray(
+  postIds: number[],
+  page=1,
+  limit=10
+) {
   "use server";
 
+  const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_posts
-    WHERE id = ANY($1::bigint[])
-    ORDER BY created_at DESC`,
+    SELECT cw_posts.*, cw_users.clerk_user_id 
+    FROM cw_posts
+    JOIN cw_users ON cw_users.id = cw_posts.user_id
+    WHERE cw_posts.id = ANY($1::bigint[])
+    ORDER BY cw_posts.created_at DESC
+    LIMIT $2 OFFSET $3`,
+    [postIds, limit, offset]
+  );
+  const posts: Post[] = await setPostsData(response);
+
+  const totalResponse = await db.query(`
+    SELECT COUNT(*) FROM cw_posts
+    WHERE id = ANY($1::bigint[])`,
     [postIds]
   );
-  const posts = response.rows as Post[];
-  return posts;
+  const totalPosts = parseInt(totalResponse.rows[0].count);
+
+  const commentedPosts = await addCommentsToPosts(posts)
+
+  return {
+    data: commentedPosts,
+    pagination: {
+      totalPosts: totalPosts,
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      pageSize: limit
+    }
+  }
 }
 
 export async function getComments(
@@ -218,15 +314,17 @@ export async function getComments(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_comments
-    WHERE post_id = $1
-    AND user_id NOT IN (SELECT unnest($2::bigint[]))
-    ORDER BY created_at DESC
+    SELECT cw_comments.*, cw_users.clerk_user_id
+    FROM cw_comments
+    JOIN cw_users ON cw_users.id = cw_comments.user_id
+    WHERE cw_comments.post_id = $1
+    AND cw_comments.user_id NOT IN (SELECT unnest($2::bigint[]))
+    ORDER BY cw_comments.created_at DESC
     LIMIT $3 OFFSET $4`,
     [postId, skipUserIds, limit, offset]
   );
-  const comments = response.rows;
-  
+  const comments = await setCommentsData(response);
+
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_comments
     WHERE post_id = $1
@@ -255,13 +353,15 @@ export async function getCommentsUser(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_comments
-    WHERE user_id = $1
-    ORDER BY created_at DESC
+    SELECT cw_comments.*, cw_users.clerk_user_id 
+    FROM cw_comments
+    JOIN cw_users ON cw_users.id = cw_comments.user_id
+    WHERE cw_comments.user_id = $1
+    ORDER BY cw_comments.created_at DESC
     LIMIT $2 OFFSET $3`,
     [userId, limit, offset]
   );
-  const comments = response.rows;
+  const comments = await setCommentsData(response);
   
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_comments
@@ -281,20 +381,6 @@ export async function getCommentsUser(
   }
 }
 
-export async function getSavedPosts(
-  userId: number,
-) {
-  "use server";
-
-  const response = await db.query(`
-    SELECT saved_posts FROM cw_users
-    WHERE id = $1`,
-    [userId]
-  );
-  const savedPosts = response.rows;
-    return savedPosts
-}
-
 export async function getLikedComments(
   userId: number,
   page=1,
@@ -304,19 +390,27 @@ export async function getLikedComments(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT * FROM cw_comments
-    WHERE user_id = $1
-    ORDER BY created_at DESC
+    SELECT cw_comments.*, cw_users.clerk_user_id 
+    FROM cw_comments
+    JOIN cw_users ON cw_users.id = cw_comments.user_id
+    WHERE cw_comments.id = ANY(
+      SELECT unnest(liked_comments)
+      FROM cw_users
+      WHERE id = $1
+    )
+    ORDER BY cw_comments.created_at DESC
     LIMIT $2 OFFSET $3`,
     [userId, limit, offset]
   );
-  const likedComments = response.rows;
+  const likedComments = await setCommentsData(response);
+
   const totalResponse = await db.query(`
     SELECT COUNT(*) FROM cw_comments
     WHERE user_id = $1`,
     [userId]
   );
   const totalLikedComments = parseInt(totalResponse.rows[0].count);
+
   return {
     data: likedComments,
     pagination: { 
@@ -330,7 +424,7 @@ export async function getLikedComments(
 
 
 /// CREATE
-export async function insertPost(postData: Omit<Post, 'id'>) {
+export async function insertPost(postData: Omit<Post, 'id' | 'clerkUser'>) {
   "use server";
 
   await db.query(`
@@ -351,18 +445,18 @@ export async function insertPost(postData: Omit<Post, 'id'>) {
   redirect(path);
 }
 
-export async function insertComment(commentData: Comment) {
+export async function insertComment(
+  userId: number, 
+  postId: number, 
+  content: string
+) {
   "use server";
 
   await db.query(`
     INSERT INTO cw_comments 
     (user_id, post_id, content)
     VALUES ($1, $2, $3)`,
-    [
-      commentData.userId,
-      commentData.postId,
-      commentData.content,
-    ]
+    [userId, postId, content]
   );
 }
 
@@ -370,7 +464,7 @@ export async function insertComment(commentData: Comment) {
 /// UPDATE
 export async function updatePost(
   postId: number, 
-  postData: Post
+  updateData: {artist: string, title: string, genreId: number, link: string, content: string}
 ) {
   "use server";
 
@@ -382,13 +476,13 @@ export async function updatePost(
       genre_id = $3, 
       link = $4, 
       content = $5
-    WHERE post_id = $6`,
+    WHERE id = $6`,
     [
-      postData.artist,
-      postData.title,
-      postData.genreId,
-      postData.link,
-      postData.content,
+      updateData.artist,
+      updateData.title,
+      updateData.genreId,
+      updateData.link,
+      updateData.content,
       postId
     ]
   );
@@ -396,15 +490,15 @@ export async function updatePost(
 
 export async function updateComment(
   commentId: number, 
-  commentData: Comment
+  content: string
 ) {
   "use server";
 
   await db.query(`
     UPDATE cw_comments
     SET content = $1
-    WHERE comment_id = $2`,
-    [commentData.content, commentId]
+    WHERE id = $2`,
+    [content, commentId]
   );
 }
 
@@ -425,7 +519,7 @@ export async function savePost(
     await db.query(`
       UPDATE cw_posts
       SET saved_count = saved_count + 1
-      WHERE post_id = $1`,
+      WHERE id = $1`,
       [postId]
     );
   }
@@ -439,7 +533,7 @@ export async function savePost(
     await db.query(`
       UPDATE cw_posts
       SET saved_count = saved_count - 1
-      WHERE post_id = $1`,
+      WHERE id = $1`,
       [postId]
     );
   }
@@ -454,29 +548,29 @@ export async function likeComment(
 
   if (addOrRemove) {
     await db.query(`
-      INSERT INTO cw_liked_comments 
-      (user_id, comment_id)
-      VALUES ($1, $2)`,
-      [userId, commentId]
+      update cw_users
+      SET liked_comments = array_append(liked_comments, $1)
+      WHERE id = $2`,
+      [commentId, userId]
     );
     await db.query(`
       UPDATE cw_comments
       SET like_count = like_count + 1
-      WHERE comment_id = $1`,
+      WHERE id = $1`,
       [commentId]
     );
   }
   else {
     await db.query(`
-      DELETE FROM cw_liked_comments
-      WHERE user_id = $1
-      AND comment_id = $2`,
-      [userId, commentId]
+      update cw_users
+      SET liked_comments = array_remove(liked_comments, $1)
+      WHERE id = $2`,
+      [commentId, userId]
     );
     await db.query(`
       UPDATE cw_comments
       SET like_count = like_count - 1
-      WHERE comment_id = $1`,
+      WHERE id = $1`,
       [commentId]
     );
   }

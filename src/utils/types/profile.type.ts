@@ -8,6 +8,7 @@ export type Profile = {
   feedUsers: number[],
   feedGenres: number[],
   savedPosts: number[],
+  likedComments: number[],
   followers: number[],
   clerkUser: User,
 }
