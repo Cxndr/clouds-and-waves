@@ -63,6 +63,7 @@ export async function setPostsData(response: QueryResult) {
         artist: response.rows[i].artist,
         title: response.rows[i].title,
         genreId: response.rows[i].genre_id,
+        genreName: response.rows[i].genre_name,
         link: response.rows[i].link,
         content: response.rows[i].content,
         dateCreated: response.rows[i].date_created,
@@ -84,7 +85,7 @@ async function setCommentsData(response: QueryResult) {
       clerkUser: response.rows[i].clerk_user_id ? JSON.parse(JSON.stringify(await clerkClient().users.getUser(response.rows[i].clerk_user_id))) : null,
       postId: response.rows[i].post_id,
       content: response.rows[i].content,
-      dateCreated: response.rows[i].date_created,
+      dateCreated: new Date(response.rows[i].date_created),
       likeCount: response.rows[i].like_count
     }
     comments.push(comment);
@@ -106,9 +107,10 @@ export async function getPostsAll(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT cw_posts.*, cw_users.clerk_user_id 
+    SELECT cw_posts.*, cw_users.clerk_user_id, cw_genres.name AS genre_name
     FROM cw_posts
     JOIN cw_users ON cw_users.id = cw_posts.user_id
+    JOIN cw_genres ON cw_genres.id = cw_posts.genre_id
     WHERE cw_posts.user_id NOT IN (SELECT unnest($1::bigint[]))
     AND cw_posts.genre_id NOT IN (SELECT unnest($2::bigint[]))
     ORDER BY cw_posts.created_at DESC
@@ -148,9 +150,10 @@ export async function getPostsUser(
   
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT cw_posts.*, cw_users.clerk_user_id
+    SELECT cw_posts.*, cw_users.clerk_user_id, cw_genres.name AS genre_name
     FROM cw_posts
     JOIN cw_users ON cw_users.id = cw_posts.user_id
+    JOIN cw_genres ON cw_genres.id = cw_posts.genre_id
     WHERE cw_posts.user_id = $1
     AND cw_posts.genre_id NOT IN (SELECT unnest($2::bigint[]))
     ORDER BY cw_posts.created_at DESC
@@ -190,9 +193,10 @@ export async function getPostsGenre(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT cw_posts.*, cw_users.clerk_user_id
+    SELECT cw_posts.*, cw_users.clerk_user_id, cw_genres.name AS genre_name
     FROM cw_posts
     JOIN cw_users ON cw_users.id = cw_posts.user_id
+    JOIN cw_genres ON cw_genres.id = cw_posts.genre_id
     WHERE cw_posts.genre_id = $1
     AND cw_posts.user_id NOT IN (SELECT unnest($2::bigint[]))
     ORDER BY cw_posts.created_at DESC
@@ -224,8 +228,8 @@ export async function getPostsGenre(
 }
 
 export async function getPostsCustom(
-  userDbId: number, 
-  genreId: number,
+  userDbId: number[], 
+  genreId: number[],
   page: number = 1,
   limit: number = 10
 ) {
@@ -233,11 +237,12 @@ export async function getPostsCustom(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT cw_posts.*, cw_users.clerk_user_id 
+    SELECT cw_posts.*, cw_users.clerk_user_id, cw_genres.name AS genre_name
     FROM cw_posts
     JOIN cw_users ON cw_users.id = cw_posts.user_id
-    WHERE cw_posts.user_id = $1
-    AND cw_posts.genre_id = $2
+    JOIN cw_genres ON cw_genres.id = cw_posts.genre_id
+    WHERE cw_posts.user_id = ANY($1::bigint[])
+    OR cw_posts.genre_id = ANY($2::bigint[])
     ORDER BY cw_posts.created_at DESC
     LIMIT $3 OFFSET $4`,
     [userDbId, genreId, limit, offset]
@@ -274,9 +279,10 @@ export async function getPostsArray(
 
   const offset = (page-1)*limit;
   const response = await db.query(`
-    SELECT cw_posts.*, cw_users.clerk_user_id 
+    SELECT cw_posts.*, cw_users.clerk_user_id, cw_genres.name AS genre_name
     FROM cw_posts
     JOIN cw_users ON cw_users.id = cw_posts.user_id
+    JOIN cw_genres ON cw_genres.id = cw_posts.genre_id
     WHERE cw_posts.id = ANY($1::bigint[])
     ORDER BY cw_posts.created_at DESC
     LIMIT $2 OFFSET $3`,
@@ -424,7 +430,7 @@ export async function getLikedComments(
 
 
 /// CREATE
-export async function insertPost(postData: Omit<Post, 'id' | 'clerkUser'>) {
+export async function insertPost(postData: Omit<Post, 'id' | 'clerkUser' | 'genreName'>) {
   "use server";
 
   await db.query(`
@@ -445,18 +451,14 @@ export async function insertPost(postData: Omit<Post, 'id' | 'clerkUser'>) {
   redirect(path);
 }
 
-export async function insertComment(
-  userId: number, 
-  postId: number, 
-  content: string
-) {
+export async function insertComment(commentData: Omit<Comment, 'id' | 'clerkUser'>) {
   "use server";
-
+  
   await db.query(`
     INSERT INTO cw_comments 
     (user_id, post_id, content)
     VALUES ($1, $2, $3)`,
-    [userId, postId, content]
+    [commentData.userId, commentData.postId, commentData.content]
   );
 }
 
@@ -583,7 +585,7 @@ export async function deletePost(postId: number) {
 
   await db.query(`
     DELETE FROM cw_posts
-    WHERE post_id = $1`,
+    WHERE id = $1`,
     [postId]
   );
 }
@@ -593,8 +595,7 @@ export async function deleteComment(commentId: number) {
 
   await db.query(`
     DELETE FROM cw_comments
-    WHERE comment_id = $1`,
+    WHERE id = $1`,
     [commentId]
   );
 }
-

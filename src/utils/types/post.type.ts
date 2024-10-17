@@ -8,6 +8,7 @@ export type Post = {
   artist: string,
   title: string,
   genreId: number,
+  genreName: string,
   link: string,
   content: string,
   dateCreated: Date,

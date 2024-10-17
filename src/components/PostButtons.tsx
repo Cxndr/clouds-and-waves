@@ -3,6 +3,8 @@ import {Profile} from '@/utils/types/profile.type';
 import { useState } from 'react';
 import { useEffect } from 'react';
 import * as Popover from "@radix-ui/react-popover";
+import { FaHeart, FaRegHeart, FaComment, FaShare } from "react-icons/fa6";
+
 
 interface PostButtonsProps {
   post: Post;
@@ -16,8 +18,9 @@ interface PostButtonsProps {
   commentsCount: number;
   commentsOpen: boolean;
   setCommentsOpen: (open: boolean) => void;
+  savedCount: number;
 }
-export default function PostButtons({post, currUser, savePost, updateSavedCount, commentsCount, commentsOpen, setCommentsOpen}:PostButtonsProps) {
+export default function PostButtons({post, currUser, savePost, updateSavedCount, commentsCount, commentsOpen, setCommentsOpen, savedCount}:PostButtonsProps) {
 
   const [postSaved, setPostSaved] = useState(false);
 
@@ -72,19 +75,31 @@ export default function PostButtons({post, currUser, savePost, updateSavedCount,
 
 
   return (
-    <div>
-      <button onClick={handleSave}>
-        { postSaved ? "Unsave" : "Save" }
-      </button>
+    <div className="flex items-center justify-evenly gap-8 ml-2">
+      
+      <a onClick={handleSave} className="text-2xl bold hover:scale-110 hover:shadow-2xl transition-all duration-300 cursor-pointer select-none">
+        <span className="flex items-center gap-2">
+          { postSaved 
+            ? <FaHeart className="inline text-red-600 align-middle text-3xl"/> 
+            : <FaRegHeart className="inline text-red-600  text-3xl"/> }
+          {`${savedCount}`}
+          </span>
+      </a>
 
-      <button onClick={handleComment}>Comment ({`${commentsCount}`})</button>
+      <a onClick={handleComment} className="text-2xl bold hover:scale-110 transition-all duration-300 cursor-pointer select-none">
+        <span className="flex items-center gap-2">
+          <FaComment/> {`${commentsCount}`}
+        </span>
+      </a>
 
       <Popover.Root open={shareNotifOpen} onOpenChange={setShareNotifOpen}>
         <Popover.Trigger asChild>
-          <button onClick={handleShare}>Share</button>
+          <a onClick={handleShare} className="text-2xl bold hover:scale-110 transition-all duration-300 cursor-pointer select-none">
+            <FaShare/>
+          </a>
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Content className="PopoverContent" sideOffset={5}>
+          <Popover.Content className="PopoverContent border-none p-2 bg-zinc-900 bg-opacity-60" sideOffset={5}>
             <p>📋 Link copied to clipboard!</p>
             <Popover.Arrow className="PopoverArrow" />
           </Popover.Content>

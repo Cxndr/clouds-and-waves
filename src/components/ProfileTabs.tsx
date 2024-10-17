@@ -17,41 +17,45 @@ interface UserProfileProps {
   savePost: (postId: number, userId: number, addOrRemove: boolean) => void;
   deletePost: (postId: number) => void;
   updatePost: (postId: number, updateData: {artist: string, title: string, genreId: number, link: string, content: string}) => void;
-  insertComment: (postId: number, userId: number, content: string) => void;
+  insertComment: (commentData: Omit<Comment, 'id' | 'clerkUser'>) => void;
   deleteComment: (commentId: number) => void;
   likeComment: (commentId: number, userId: number, addOrRemove: boolean) => void;
   updateComment: (commentId: number, content: string) => void;
 }
 
 export default function ProfileTabs({posts, comments, saved, liked, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment}: UserProfileProps) {
-  return (
-    <div>
-      <Tabs.Root>
 
-        <Tabs.List>
+
+  return (
+    <div className="w-full h-full">
+      <Tabs.Root className="w-full h-full flex flex-col items-start">
+
+        <Tabs.List className="flex gap-4 mb-3">
           <Tabs.Trigger value="posts-tab">Posts</Tabs.Trigger>
           <Tabs.Trigger value="comments-tab">Comments</Tabs.Trigger>
           <Tabs.Trigger value="saved-tab">Saved</Tabs.Trigger>
           <Tabs.Trigger value="liked-tab">Liked Comments</Tabs.Trigger>
         </Tabs.List>
         
-        <Tabs.Content value="posts-tab">
-          <ScrollArea.Root className=" ScrollAreaRoot h-60 w-full">
-            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800">
-              {posts.data.map((postData) => (
-                <PostWide 
-                  key={postData.id} 
-                  postData={postData}
-                  currUser={currUser}
-                  savePost={savePost}
-                  deletePost={deletePost}
-                  updatePost={updatePost}
-                  insertComment={insertComment}
-                  deleteComment={deleteComment}
-                  likeComment={likeComment}
-                  updateComment={updateComment}
-                />
-              ))}
+        <Tabs.Content value="posts-tab" className="w-full h-96 flex-grow rounded-2xl">
+          <ScrollArea.Root className="ScrollAreaRoot h-full w-full rounded-2xl">
+            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800 bg-opacity-0 w-full rounded-2xl">
+              <div className="flex flex-col gap-4">
+                {posts.data.map((postData) => (
+                    <PostWide 
+                      key={postData.id} 
+                      postData={postData}
+                    currUser={currUser}
+                      savePost={savePost}
+                      deletePost={deletePost}
+                      updatePost={updatePost}
+                      insertComment={insertComment}
+                      deleteComment={deleteComment}
+                      likeComment={likeComment}
+                      updateComment={updateComment}
+                    />
+                ))}
+              </div>
             </ScrollArea.Viewport>
             <ScrollArea.Scrollbar className="ScrollAreaScrollbar" orientation="vertical">
               <ScrollArea.Thumb className="ScrollAreaThumb"/>
@@ -59,12 +63,13 @@ export default function ProfileTabs({posts, comments, saved, liked, currUser, sa
           </ScrollArea.Root>
         </Tabs.Content>
 
-        <Tabs.Content value="comments-tab">
-          <ScrollArea.Root className=" ScrollAreaRoot h-60 w-full">
-            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800">
+        <Tabs.Content value="comments-tab" className="w-full h-96 flex-grow rounded-2xl">
+          <ScrollArea.Root className=" ScrollAreaRoot h-full w-full rounded-2xl">
+            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800 bg-opacity-0 w-full rounded-2xl">
               {comments.data.map((comment) => (
-                <CommentSingle 
-                  comment={comment} 
+                <CommentSingle
+                  key={comment.id}
+                  commentData={comment} 
                   currUser={currUser} 
                   likeComment={likeComment} 
                   deleteComment={deleteComment} 
@@ -78,36 +83,39 @@ export default function ProfileTabs({posts, comments, saved, liked, currUser, sa
           </ScrollArea.Root>
         </Tabs.Content>
 
-        <Tabs.Content value="saved-tab">
-          <ScrollArea.Root className=" ScrollAreaRoot h-60 w-full">
-            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800">
-              {saved.data.map((postData) => (
-                <PostWide 
-                key={postData.id} 
-                postData={postData}
-                currUser={currUser}
-                savePost={savePost}
-                deletePost={deletePost}
-                updatePost={updatePost}
-                insertComment={insertComment}
-                deleteComment={deleteComment}
-                likeComment={likeComment}
-                updateComment={updateComment}
-              />
-              ))}
-            </ScrollArea.Viewport>
+        <Tabs.Content value="saved-tab" className="w-full h-96 flex-grow rounded-2xl">
+          <ScrollArea.Root className=" ScrollAreaRoot h-full w-full rounded-2xl">
+            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800 bg-opacity-0 w-full rounded-2xl">
+              <div className="flex flex-col gap-4">
+                {saved.data.map((postData) => (
+                  <PostWide 
+                    key={postData.id} 
+                    postData={postData}
+                    currUser={currUser}
+                    savePost={savePost}
+                    deletePost={deletePost}
+                    updatePost={updatePost}
+                    insertComment={insertComment}
+                    deleteComment={deleteComment}
+                    likeComment={likeComment}
+                    updateComment={updateComment}
+                  />
+                  ))}
+                </div>
+              </ScrollArea.Viewport>
             <ScrollArea.Scrollbar className="ScrollAreaScrollbar" orientation="vertical">
               <ScrollArea.Thumb className="ScrollAreaThumb"/>
             </ScrollArea.Scrollbar>
           </ScrollArea.Root>
         </Tabs.Content>
 
-        <Tabs.Content value="liked-tab">
-          <ScrollArea.Root className=" ScrollAreaRoot h-60 w-full">
-            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800">
+        <Tabs.Content value="liked-tab" className="w-full h-96 flex-grow rounded-2xl">
+          <ScrollArea.Root className=" ScrollAreaRoot h-full w-full rounded-2xl">
+            <ScrollArea.Viewport className="ScrollAreaViewport bg-slate-800 bg-opacity-0 w-full rounded-2xl">
               {liked.data.map((comment) => (
                   <CommentSingle 
-                  comment={comment} 
+                  key={comment.id}
+                  commentData={comment} 
                   currUser={currUser} 
                   likeComment={likeComment} 
                   deleteComment={deleteComment} 

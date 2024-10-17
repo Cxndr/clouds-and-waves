@@ -57,7 +57,7 @@ export async function getUser(clerkUser: User) {
     console.log("no database entry found for profile - creating one now");
     await db.query(`
       INSERT INTO cw_users (clerk_user_id)
-      VALUES ($1, $2)`,
+      VALUES ($1)`,
       [clerkUser.id]
     );
   }
@@ -80,10 +80,10 @@ export async function getUsers(userIds: number[]) {
 }
 
 /// UPDATE
-interface FormDataObject {
-  username: string;
-  bio: string;
-}
+// interface FormDataObject {
+//   username: string;
+//   bio: string;
+// }
 export async function updateUser(formData: {bio: string}) {
   "use server";
   const clerkAuthUser = auth();
