@@ -3,6 +3,7 @@ import UserProfile from "@/components/UserProfile";
 import { getUser, getUsers, updateUser } from "@/utils/userFunctions";
 import { Profile } from "@/utils/types/profile.type";
 import { getPostsUser, getCommentsUser, getLikedComments, getPostsArray, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment} from "@/utils/postFunctions";
+import { db } from "@/utils/dbConn";
 
 
 export default async function ProfilePage({params}: {params: {userId: string}}) {
@@ -35,6 +36,9 @@ export default async function ProfilePage({params}: {params: {userId: string}}) 
     )
   }
 
+  const genreOptionsResponse = await db.query(`SELECT * FROM mus_genres`);
+  const genreOptions = genreOptionsResponse.rows;
+
   return (
     <UserProfile 
       user={user} 
@@ -53,6 +57,7 @@ export default async function ProfilePage({params}: {params: {userId: string}}) 
       deleteComment={deleteComment}
       likeComment={likeComment}
       updateComment={updateComment}
+      genreOptions={genreOptions}
     />
   );
 }

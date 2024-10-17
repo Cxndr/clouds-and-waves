@@ -25,9 +25,10 @@ interface UserProfileProps {
   deleteComment: (commentId: number) => void;
   likeComment: (commentId: number, userId: number, addOrRemove: boolean) => void;
   updateComment: (commentId: number, content: string) => void;
+  genreOptions: {id: number, name: string}[];
 }
 
-export default function UserProfile({user, posts, comments, saved, liked, followers, following, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment, updateUser}: UserProfileProps) {
+export default function UserProfile({user, posts, comments, saved, liked, followers, following, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment, updateUser, genreOptions}: UserProfileProps) {
 
   const [ownedProfile, setOwnedProfile] = useState(false);
 
@@ -146,6 +147,7 @@ export default function UserProfile({user, posts, comments, saved, liked, follow
             deleteComment={deleteComment}
             likeComment={likeComment}
             updateComment={updateComment}
+            genreOptions={genreOptions}
           />
         </div>
 

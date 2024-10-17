@@ -21,9 +21,10 @@ interface UserProfileProps {
   deleteComment: (commentId: number) => void;
   likeComment: (commentId: number, userId: number, addOrRemove: boolean) => void;
   updateComment: (commentId: number, content: string) => void;
+  genreOptions: {id: number, name: string}[];
 }
 
-export default function ProfileTabs({posts, comments, saved, liked, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment}: UserProfileProps) {
+export default function ProfileTabs({posts, comments, saved, liked, currUser, savePost, deletePost, updatePost, insertComment, deleteComment, likeComment, updateComment, genreOptions}: UserProfileProps) {
 
 
   return (
@@ -53,6 +54,7 @@ export default function ProfileTabs({posts, comments, saved, liked, currUser, sa
                       deleteComment={deleteComment}
                       likeComment={likeComment}
                       updateComment={updateComment}
+                      genreOptions={genreOptions}
                     />
                 ))}
               </div>
@@ -99,6 +101,7 @@ export default function ProfileTabs({posts, comments, saved, liked, currUser, sa
                     deleteComment={deleteComment}
                     likeComment={likeComment}
                     updateComment={updateComment}
+                    genreOptions={genreOptions}
                   />
                   ))}
                 </div>
