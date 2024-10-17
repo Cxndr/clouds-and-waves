@@ -1,5 +1,6 @@
 import { Profile } from '@/utils/types/profile.type';
 import * as HoverCard from "@radix-ui/react-hover-card";
+import Image from 'next/image';
 
 
 export default function UserCard({user}:{user: Profile}) {
@@ -9,7 +10,11 @@ export default function UserCard({user}:{user: Profile}) {
 
       <HoverCard.HoverCardTrigger asChild>
         <a href={`/profile/${user.clerkId}`}>
-          <img src={user.clerkUser.imageUrl} alt={`${user.clerkUser.username}`} />
+          <Image 
+            src={user.clerkUser.imageUrl} 
+            alt={`${user.clerkUser.username}`}
+            width="100" height="100"
+          />
         </a>
       </HoverCard.HoverCardTrigger>
 
