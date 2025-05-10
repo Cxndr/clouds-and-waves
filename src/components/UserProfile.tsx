@@ -21,7 +21,7 @@ interface UserProfileProps {
   savePost: (postId: number, userId: number, addOrRemove: boolean) => void;
   deletePost: (postId: number) => void;
   updatePost: (postId: number, updateData: {artist: string, title: string, genreId: number, link: string, content: string}) => void;
-  insertComment: (commentData: Omit<Comment, 'id' | 'clerkUser'>) => void;
+  insertComment: (commentData: Omit<Comment, 'id' | 'clerkUser'>) => Promise<void>;
   deleteComment: (commentId: number) => void;
   likeComment: (commentId: number, userId: number, addOrRemove: boolean) => void;
   updateComment: (commentId: number, content: string) => void;
